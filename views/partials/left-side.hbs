@@ -18,6 +18,13 @@
       </a>
     </div>
     <div class="m-2 p-2 bd-highlight">
+      <a href="/publicChatRoom">
+        <h5 style="color:{{#ifCond route 'publicChatRoom'}}#FF6600;{{else}}black{{/ifCond}}">
+          <img src="/images/icons/message.png" alt="personal-page">公開聊天室
+        </h5>
+      </a>
+    </div>
+    <div class="m-2 p-2 bd-highlight">
       <a href="/users/{{user.id}}/setting">
         <h5 style="color:{{#ifCond route 'setting'}}#FF6600;{{else}}black{{/ifCond}}">
           <img src="/images/icons/setting.png" alt="setting-page">設定
