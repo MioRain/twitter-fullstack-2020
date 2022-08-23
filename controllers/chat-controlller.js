@@ -6,6 +6,7 @@ const helpers = require('../_helpers')
 
 const chatController = {
   renderPublicChatRoom: (req, res) => {
+
     return res.render('publicChatRoom')
   }
 

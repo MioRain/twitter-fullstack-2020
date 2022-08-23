@@ -2,8 +2,20 @@
   <div class="row justify-content-md-center">
 
     {{> left-side route='publicChatRoom'}}
+    <div class="user-main col-3">
+      <div class="container-fluid" style="height:650px;margin-top:50px">
 
-    <div class="user-main col-9">
+        <ul class="ul-user-online" id="allUserList" style="list-style-type:none">
+          <!--每一個使用者 開始-->
+
+          <!--每一個使用者 結束-->
+        </ul>
+
+      </div>
+
+    </div>
+
+    <div class="user-main col-6">
 
       <div class="d-flex m-2">
         <a href="javascript:history.back()">
@@ -15,19 +27,15 @@
         </div>
       </div>
       <div class="hr-line"></div>
-      <div class="container-fluid" style="border:2px solid tomato;height:650px">
+      <div class="container-fluid">
 
 
 
 
         <div class="public-message-middle">
           <ul class="ul-public-message" id="public-message" style="height:100%;display: flex;
-        flex-direction: column;">
+        flex-direction: column; list-style-type:none">
 
-            <li class="li-left-message" style="flex: 1;">在幹嘛</li>
-            <li class="li-left-message" style="flex: 1;">在幹嘛啊</li>
-            <li class="li-left-message" style="flex: 1;">在幹嘛</li>
-            <li class="li-left-message" style="flex: 1;">在幹嘛啊</li>
             {{!-- 聊天室內容<li></li>>，一開始為空 --}}
 
           </ul>
@@ -36,11 +44,14 @@
         <form id="public-message-form" action="">
           <div class="public-message-footer">
             <input id="messageInput" type="text" placeholder="請輸入訊息 ..." maxlength="160" class="public-message-input">
-            <button class="send-btn" type="button" style="border:1px solid tomato;">
+            <button class="send-btn" type="submit">
               傳送
             </button>
           </div>
         </form>
+
+
+
 
 
 
@@ -55,3 +66,140 @@
     </div>
 
   </div>
+  {{!-- const loginUserId = {{ loginUser.id }} --}}
+  {{!-- const user = {{ loginUser }} --}}
+
+  {{!-- console.log('user', user)
+  console.log('loginUserId', loginUserId) --}}
+  <script>
+    const AllChatroomSocket = io("/publicChatRoom")
+    AllChatroomSocket.auth = { userId: '{{user.id}}' }
+    const loginUserId = Number('{{user.id}}')
+    AllChatroomSocket.emit('login')
+
+
+
+    const form = document.getElementById('public-message-form');
+    const input = document.getElementById('messageInput');
+    const messages = document.getElementById('public-message');
+    const allUserListDOM = document.getElementById('allUserList')
+
+
+
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (input.value) {
+        AllChatroomSocket.emit('chat message', input.value);
+        input.value = '';
+      }
+    });
+
+    AllChatroomSocket.on('chat message', function (returnObj) {
+      console.log('returnObj', returnObj)
+      showMessageOnChatBox(returnObj)
+    });
+
+
+    AllChatroomSocket.on('broadcastLogEvent', (usersData) => {
+
+      const usersArray = Object.values(usersData)
+      console.log('usersArray', usersArray)
+      //  userList 顯示邏輯 --- 
+      let rawHTML = `
+          <li class="li-user-online">
+            <span class="user-title-span">上線使用者&nbsp;&nbsp;(${usersArray.length})</span>
+          </li>
+        `
+      usersArray.forEach((user) => {
+        rawHTML +=
+          `
+          <li class='li-user-online'>
+            <img src="${user.avatar}"
+              class="tweet-user-avatar" style="width:50px;height:50px;display:inline-block;" alt="Picture">
+            <a class="li-name" href="/users/${user.id}/tweets">${user.name}</a>
+            <a class="li-account" href="/users/${user.id}/tweets">@${user.account}</a>
+          </li>
+          `
+        allUserListDOM.innerHTML = rawHTML
+      })
+    })
+    AllChatroomSocket.on('loginEvent', (userData) => {
+      //  userLogin 顯示邏輯 --- 
+      const userStatus = document.createElement('li')
+      userStatus.className = 'li-status-message'
+      userStatus.innerHTML =
+        `
+          <span class="span-status-message">
+            ${userData.name} 上線了
+          </span>
+          `
+      messages.appendChild(userStatus)
+      window.scrollTo(0, document.body.scrollHeight)
+    })
+
+    AllChatroomSocket.on('logoutEvent', (userData) => {
+      //  userLogin 顯示邏輯 --- 
+      const userStatus = document.createElement('li')
+      userStatus.className = 'li-status-message'
+      userStatus.innerHTML =
+        `
+          <span class="span-status-message">
+            ${userData.name} 離線了
+          </span>
+          `
+      messages.appendChild(userStatus)
+      window.scrollTo(0, document.body.scrollHeight)
+    })
+
+
+    function showMessageOnChatBox(receivedObj) {
+      if (Number(receivedObj.id) !== loginUserId) {
+        // 他人的訊息 --- 出現在左邊
+        const leftHandMessage = document.createElement('li')
+        leftHandMessage.className = 'li-left-message'
+        leftHandMessage.innerHTML =
+          `
+      <div class="message-img">
+        <img src="${receivedObj.avatar}" class=""
+          style="width:40px;height:40px;border-radius: 50px;" alt="Picture">
+      </div>
+   
+      <div class="message-span">
+        <span>
+          ${receivedObj.message}
+        </span>
+      </div>
+      <span class="message-time">${timeFormat(new Date())}</span>
+      `
+        messages.appendChild(leftHandMessage)
+      } else {
+        // 自已的訊息 --- 出現在右邊
+        const rightHandMessage = document.createElement('li')
+        rightHandMessage.className = 'li-right-message'
+        rightHandMessage.innerHTML =
+          `
+      <div class="message-span">
+        <span class="span-message">
+          ${receivedObj.message}
+        </span>
+      </div>
+      <span class="message-time">${timeFormat(new Date())}</span>
+      `
+        messages.appendChild(rightHandMessage)
+      }
+
+    }
+
+    function timeFormat(timeObj) {
+      const hour = timeObj.getHours()
+      const minute = timeObj.getMinutes()
+      if (hour >= 12) return `下午${hour - 12}:${minute}`
+      else return `上午${hour}:${minute}`
+    }
+
+
+
+
+
+  </script>

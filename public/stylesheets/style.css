@@ -984,3 +984,45 @@
    background-color: #FF6600 !Important;
    border: solid 1px #FF6600;
  }
+
+ /* socket.lo */
+ #public-message-form {
+   display: flex;
+
+   justify-content: flex-end;
+   position: absolute;
+   bottom: 20px;
+   right: 150px
+ }
+
+
+
+ .li-status-message {
+   display: flex;
+
+   justify-content: flex-center;
+   margin-top: 5px;
+
+
+ }
+
+ .span-status-message {
+   display: flex;
+
+   margin: auto;
+   text-align: center;
+ }
+
+ .li-left-message {
+   display: flex;
+
+   justify-content: flex-start;
+   margin-top: 5px
+ }
+
+ .li-right-message {
+   display: flex;
+
+   justify-content: flex-end;
+   margin-top: 5px
+ }
