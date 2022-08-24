@@ -22,7 +22,7 @@
           <h3 class="my-2 fw-normal">←</h3>
         </a>
         <div class="col ms-0 ps-2">
-          <span class="my-0 py-0 fw-bold">{{personal.name}}</span><br />
+          <span class="my-0 py-0 fw-bold">{{user.name}}</span><br />
           <h2 class="my-0 py-0 text-secondary">公開聊天室</h2>
         </div>
       </div>
@@ -73,19 +73,14 @@
   console.log('loginUserId', loginUserId) --}}
   <script>
     const AllChatroomSocket = io("/publicChatRoom")
-    AllChatroomSocket.auth = { userId: '{{user.id}}' }
     const loginUserId = Number('{{user.id}}')
+    AllChatroomSocket.auth = { userId: loginUserId }
     AllChatroomSocket.emit('login')
-
-
 
     const form = document.getElementById('public-message-form');
     const input = document.getElementById('messageInput');
     const messages = document.getElementById('public-message');
     const allUserListDOM = document.getElementById('allUserList')
-
-
-
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -96,7 +91,6 @@
     });
 
     AllChatroomSocket.on('chat message', function (returnObj) {
-      console.log('returnObj', returnObj)
       showMessageOnChatBox(returnObj)
     });
 

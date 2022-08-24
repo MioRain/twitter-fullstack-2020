@@ -1,0 +1,291 @@
+<div class="container">
+  <div class="row justify-content-md-center">
+
+    {{> left-side route='privateChatRoom'}}
+    <div class="user-main col-3">
+      <div class="container-fluid" style="height:650px;margin-top:50px;padding:0px">
+        <div class="pm-list" style="padding:0px">
+          <ul class="ul-user-online" id="allUserList" style="list-style-type:none;position: relative;padding:0px">
+            <!--每一個使用者 開始-->
+
+
+            <!--每一個使用者 結束-->
+          </ul>
+        </div>
+
+
+      </div>
+
+    </div>
+
+    <div class="user-main col-6">
+
+      <div class="d-flex m-2">
+        <a href="javascript:history.back()">
+          <h3 class="my-2 fw-normal">←</h3>
+        </a>
+        <div class="col ms-0 ps-2">
+          <span class="my-0 py-0 fw-bold"></span><br />
+          <h2 class="my-0 py-0 text-secondary" id="roomName"></h2>
+        </div>
+      </div>
+      <div class="hr-line"></div>
+      <div class="container-fluid">
+
+
+
+
+
+
+
+        <div class="public-message-middle">
+          <ul class="ul-public-message" id="public-message" style="height:100%;display: flex;
+        flex-direction: column; list-style-type:none">
+
+            {{!-- 聊天室內容<li></li>>，一開始為空 --}}
+
+          </ul>
+        </div>
+
+        <form id="public-message-form" action="">
+          <div class="public-message-footer">
+            <input id="messageInput" type="text" placeholder="請輸入訊息 ..." maxlength="160" class="public-message-input">
+            <button class="send-btn" type="submit">
+              傳送
+            </button>
+          </div>
+        </form>
+
+
+
+
+
+
+
+
+
+      </div>
+
+
+
+
+    </div>
+
+  </div>
+
+  <script>
+    const PMsocket = io('/privateChatRoom')
+    const loginUserId = Number('{{user.id}}')
+    let targetUserId = Number('{{PmTargetUserId}}')
+    let tempRoom = ''
+
+    PMsocket.auth = { userId: loginUserId }
+    PMsocket.emit('updatePmList', targetUserId)
+
+    const form = document.getElementById('public-message-form');
+    const input = document.getElementById('messageInput');
+    const messages = document.getElementById('public-message');
+    const allUserListDOM = document.getElementById('allUserList')
+    const roomName = document.getElementById('roomName')
+
+
+
+    PMsocket.on('updatePmList', (PmDataArray, targetUserData) => {
+
+      const allPmMessages = PmDataArray
+      //使用map整理，只列出receiver
+      const usersList = PmDataArray
+        .map((PM) => {
+          if (PM.receiverId === loginUserId) {
+            return { ...PM.sender, unread: PM.unread }
+          } else {
+            return PM.receiver
+          }
+        })
+
+      if (targetUserData) usersList.push(targetUserData)
+      // 將想要 PM 的對象加到人員名單之中
+      const set = new Set()
+      const pmListUsers = []
+      usersList.forEach((user) => {
+        if (!set.has(user.id)) {
+          set.add(user.id)
+          pmListUsers.push(user)
+        }
+      })
+
+
+      let rawHTML =
+        `
+          <li class="li-user-online" style="display:flex">
+            <span class="user-title-span">訊息</span>
+            <button class="btn btn-outline-second btn-readPM" onclick="readAllPrivateMessage()"
+            style="margin: 1.5rem 1.5rem 1.5rem auto;padding: 0.25rem;">
+              全部已讀
+            </button>
+          </li>
+          `
+      pmListUsers.forEach((user) => {
+        rawHTML +=
+          `
+          <li class='li-user-online userCard' data-name="${user.name}"  data-id="${user.id}" id=${user.id}>
+            <a  href="/users/${user.id}/tweets">
+            <img src="${user.avatar}"
+              class="tweet-user-avatar" style="width:50px;height:50px;display:inline-block;border-radius: 50%;" alt="Picture">
+            <a>
+            <span class="li-name" >${user.name}</span>
+            <span class="li-account">@${user.account}</span>
+            
+            ${user.unread === 1 ? '<div class="nav-circle-pm nav-circle-count-pm">  </div>' : ''}
+          </li>
+          `
+      })
+      allUserListDOM.innerHTML = rawHTML
+
+      allUserListDOM.addEventListener('click', event => {
+        const targetUserCard = event.target.closest('.li-user-online')
+        targetUserId = Number(targetUserCard.dataset.id)
+        const targetUserName = targetUserCard.dataset.name
+        roomName.innerText = `${targetUserName}私人聊天室`
+        //串連接到創建新房間
+        CreatePrivateRoom(tempRoom)
+
+      })
+      //為了直接進到私人聊天室就有點選event listener的效果，不用另外寫前端邏輯
+      let TalkingUserNow
+      if (targetUserId) {
+        //TalkingUserNow = allUserListDOM.querySelector(`[id="${targetUserId}"]`)
+        TalkingUserNow = document.getElementById(targetUserId)
+
+      } else {
+        TalkingUserNow = allUserListDOM.children[1]
+      }
+      TalkingUserNow.click()
+
+    })
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault()
+      PMsocket.emit('privateMessage', { msg: input.value, targetUserId })
+      input.value = ''
+    })
+
+    PMsocket.on('privateMessage', function (returnObj) {
+
+      console.log('returnObj', returnObj)
+      showMessageOnChatBox(returnObj)
+    })
+
+
+
+
+    //創建新房間並離開舊房間
+    //step 1 emit join room至後端
+    function CreatePrivateRoom(tempRoom) {
+      clearPmCanvasAndShowWait()
+      const oldRoom = tempRoom
+      PMsocket.emit('join room', { oldRoom, targetUserId })
+    }
+    //step 2 創建成功，呼叫聊天視窗更新
+    PMsocket.on('createRoomSuccessful', newRoom => {
+      tempRoom = newRoom
+      PMsocket.emit('updateChatBox', targetUserId)
+    })
+    //step3 接收後端回傳的訊息進行前端炫染
+    PMsocket.on('updateChatBox', PrivateMessages => {
+      clearPmCanvasAndShow()
+      const msgArray = MappingPmToMessageArray(PrivateMessages)
+
+
+      msgArray.forEach((msgObj) => { showMessageOnChatBox(msgObj) })
+
+    })
+
+
+
+
+    function clearPmCanvasAndShowWait() {
+      messages.innerHTML = `<li class="li-left-message" style="flex: 1;flex-direction: column;margin-top: 35vh;"> 讀取中 請等等</li>`
+    }
+    function clearPmCanvasAndShow() {
+      messages.innerHTML = `<li class="li-left-message" style="flex: 1;"></li>`
+    }
+    function MappingPmToMessageArray(PrivateMessages) {
+      const filteredPM = PrivateMessages.filter((pm) => {
+        const senderId = pm.senderId
+        const receiverId = pm.receiverId
+        return (senderId === targetUserId || senderId === loginUserId) && (receiverId === targetUserId || receiverId === loginUserId)
+      })
+
+      return filteredPM.map((pm) => {
+        return { ...pm.sender, message: pm.message, createdAt: pm.createdAt }
+      })
+    }
+
+    function showMessageOnChatBox(receivedObj) {
+      if (Number(receivedObj.id) !== loginUserId) {
+        // 他人的訊息 --- 出現在左邊
+        const leftHandMessage = document.createElement('li')
+        leftHandMessage.className = 'li-left-message'
+        leftHandMessage.innerHTML =
+          `
+      <div class="message-img">
+        <img src="${receivedObj.avatar}" class=""
+          style="width:40px;height:40px;border-radius: 50px;" alt="Picture">
+      </div>
+   
+      <div class="message-span">
+        <span>
+          ${receivedObj.message}
+        </span>
+      </div>
+      <span class="message-time">${formatTime(receivedObj.createdAt)}</span>
+      `
+        messages.appendChild(leftHandMessage)
+      } else {
+        // 自已的訊息 --- 出現在右邊
+        const rightHandMessage = document.createElement('li')
+        rightHandMessage.className = 'li-right-message'
+        rightHandMessage.innerHTML =
+          `
+      <div class="message-span">
+        <span class="span-message">
+          ${receivedObj.message}
+        </span>
+      </div>
+      <span class="message-time">${formatTime(receivedObj.createdAt)}</span>
+      `
+        messages.appendChild(rightHandMessage)
+      }
+
+    }
+
+    function timeFormat(timeObj) {
+      const hour = timeObj.getHours()
+      const minute = timeObj.getMinutes()
+      if (hour >= 12) return `下午${hour - 12}:${minute}`
+      else return `上午${hour}:${minute}`
+    }
+
+    function formatTime(time) {
+      let word = ''
+      const timeArray = time.slice(11, 16).split(':')
+      let hour = Number(timeArray[0]) + 8
+      if (hour > 24) {
+        hour -= 24
+        word = '上午'
+      } else if (hour > 12) {
+        hour -= 12
+        word = '下午'
+      } else if (hour <= 12 && hour >= 10) {
+        word = '下午'
+      } else {
+        hour = '0' + hour.toString()
+        word = '下午'
+      }
+      return word + ' ' + hour + ':' + timeArray[1]
+    }
+
+
+
+  </script>

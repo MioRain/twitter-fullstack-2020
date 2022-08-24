@@ -1026,3 +1026,13 @@
    justify-content: flex-end;
    margin-top: 5px
  }
+
+
+
+ .li-user-online {
+   position: relative;
+   margin-left: 0px;
+   height: 69px;
+   border: 1px solid #E6ECF0;
+
+ }

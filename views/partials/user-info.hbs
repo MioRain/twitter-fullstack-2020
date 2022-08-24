@@ -48,6 +48,9 @@
         style="width:150px;height:150px">
     </a>
     <div class="d-flex align-items-end">
+      <a href="/privateChatRoom/{{personal.id}}">
+        <img src="/images/icons/message.png" style="margin-right:10px;width:30px;height:30px;" alt="">
+      </a>
       {{#if user.isFollowed}}
       <form action="/followships/{{personal.id}}?_method=DELETE" method="POST">
         <div class="bd-highlight">

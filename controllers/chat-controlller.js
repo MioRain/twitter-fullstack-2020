@@ -8,6 +8,15 @@ const chatController = {
   renderPublicChatRoom: (req, res) => {
 
     return res.render('publicChatRoom')
+  },
+
+  renderPrivateChatRoom: async (req, res, next) => {
+    const PmTargetUserId = req.params.id
+    try {
+      res.render('privateChatRoom', { PmTargetUserId })
+    } catch (err) {
+      next(err)
+    }
   }
 
 }
